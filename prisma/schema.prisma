@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model League {
+  id      Int     @id @default(autoincrement())
+  code    String  @unique   // "EPL", "LA_LIGA"
+  name    String
+
+  teams   Team[]
+  matches Match[]
+}
+
+model Team {
+  id        Int      @id @default(autoincrement())
+  name      String
+  shortName String
+
+  league    League   @relation(fields: [leagueId], references: [id])
+  leagueId  Int
+
+  homeMatches Match[] @relation("HomeTeam")
+  awayMatches Match[] @relation("AwayTeam")
+}
+
+model Match {
+  id           Int      @id @default(autoincrement())
+  externalId   String   @unique   // "1", "2", etc
+  kickoffTime  DateTime
+
+  league       League   @relation(fields: [leagueId], references: [id])
+  leagueId     Int
+
+  homeTeam     Team     @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  homeTeamId   Int
+
+  awayTeam     Team     @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  awayTeamId   Int
+
+  prediction   Prediction?
+}
+
+model Prediction {
+  id          Int     @id @default(autoincrement())
+
+  match       Match   @relation(fields: [matchId], references: [id])
+  matchId     Int     @unique
+
+  // winner probabilities
+  homeWinProb Float
+  drawProb    Float
+  awayWinProb Float
+  winnerPick  String   // "HOME" | "DRAW" | "AWAY"
+
+  // double chance
+  homeOrDrawProb   Float
+  homeOrAwayProb   Float
+  drawOrAwayProb   Float
+  doubleChancePick String // "1X" | "12" | "X2"
+
+  // goals + BTTS
+  over25Prob  Float
+  under25Prob Float
+  bttsYesProb Float
+  bttsNoProb  Float
+  goalsPick   String // "OVER_2_5" | "UNDER_2_5"
+  bttsPick    String // "YES" | "NO"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  name         String?
+  passwordHash String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+
+  sentRequests     FriendRequest[] @relation("SentRequests")
+  receivedRequests FriendRequest[] @relation("ReceivedRequests")
+
+  friends     Friend[] @relation("FriendsUser")
+  friendsOf   Friend[] @relation("FriendsFriend")
+}
+
+model FriendRequest {
+  id         String   @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  status     String   @default("PENDING") // PENDING | ACCEPTED | DECLINED
+  createdAt  DateTime @default(now())
+
+  fromUser User @relation("SentRequests", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("ReceivedRequests", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@index([toUserId, status])
+  @@index([fromUserId, status])
+}
+
+model Friend {
+  id        String   @id @default(cuid())
+  userId    String
+  friendId  String
+  createdAt DateTime @default(now())
+
+  user   User @relation("FriendsUser", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FriendsFriend", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
+}
