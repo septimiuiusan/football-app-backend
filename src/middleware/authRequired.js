@@ -8,18 +8,15 @@ module.exports = function authRequired(req, res, next) {
 
   const token = header.slice(7);
   const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    return res.status(500).json({ error: "JWT_SECRET missing" });
-  }
+  if (!secret) return res.status(500).json({ error: "JWT_SECRET missing" });
 
   try {
     const decoded = jwt.verify(token, secret);
     if (!decoded || !decoded.userId) {
       return res.status(401).json({ error: "Invalid token" });
     }
-
     req.auth = { userId: decoded.userId };
-    next();
+    return next();
   } catch {
     return res.status(401).json({ error: "Invalid token" });
   }

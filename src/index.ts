@@ -8,6 +8,7 @@ const OpenAI = require("openai");
 
 const authRoutesMod = require("./routes/auth.routes");
 const friendsRoutesMod = require("./routes/friends.routes");
+const usersRoutesMod = require("./routes/users.routes"); // ✅ add this
 
 const {
   getTrackedFixturesNextDays,
@@ -36,18 +37,23 @@ function pickRouter(mod: any) {
 
 const authRoutes = pickRouter(authRoutesMod);
 const friendsRoutes = pickRouter(friendsRoutesMod);
+const usersRoutes = pickRouter(usersRoutesMod);
 
 const app = express();
 
 // DEBUG
 console.log("authRoutes type:", typeof authRoutes);
 console.log("friendsRoutes type:", typeof friendsRoutes);
+console.log("usersRoutes type:", typeof usersRoutes);
 
 if (typeof authRoutes !== "function") {
   throw new Error("authRoutes is not a router function. Fix ./routes/auth.routes export.");
 }
 if (typeof friendsRoutes !== "function") {
   throw new Error("friendsRoutes is not a router function. Fix ./routes/friends.routes export.");
+}
+if (typeof usersRoutes !== "function") {
+  throw new Error("usersRoutes is not a router function. Fix ./routes/users.routes export.");
 }
 
 app.use(cors());
@@ -56,7 +62,7 @@ app.use("/uploads", express.static("uploads"));
 
 // ✅ ROUTES
 app.use("/api/auth", authRoutes);
-// friendsRoutes contains its own auth middleware per-route, so keep it public here
+app.use("/api/users", usersRoutes);   // ✅ FIX
 app.use("/api", friendsRoutes);
 
 // ----------------------------
